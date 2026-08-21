@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="Créations 3D, photos d'atelier et notes de conception.">
+<script>(function(){try{var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='%232B2A26' stroke-width='1.8' d='M12 2 L21 7 L21 17 L12 22 L3 17 L3 7 Z M12 22 L12 12 M12 12 L21 7 M12 12 L3 7'/%3E%3C/svg%3E">
 <title>Atelier</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -11,6 +12,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="theme.js" defer></script>
 </head>
 <body>
 
@@ -26,6 +28,9 @@
         <a href="apropos.html">À propos</a>
         <a href="contact.html">Contact</a>
       </div>
+      <button class="icon-btn" id="theme-toggle" title="Changer de thème" aria-label="Changer de thème" style="margin-right:8px;">
+        <svg class="icon" id="theme-icon" viewBox="0 0 24 24"></svg>
+      </button>
       <div class="header-actions" id="header-actions">
         <button class="icon-btn" id="login-btn" title="Connexion"><svg class="icon" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></button>
       </div>
@@ -50,6 +55,19 @@
       </div>
     </div>
     <div class="filter-row" id="filter-row"></div>
+    <div class="filter-bar" id="filter-bar">
+      <select id="sort-select">
+        <option value="recent">Plus récents</option>
+        <option value="oldest">Plus anciens</option>
+        <option value="likes">Plus aimés</option>
+        <option value="comments">Plus commentés</option>
+      </select>
+      <div class="access-toggle" id="access-toggle" style="display:none;">
+        <button type="button" data-access="all" class="active">Tous</button>
+        <button type="button" data-access="public">Public</button>
+        <button type="button" data-access="private">Privé</button>
+      </div>
+    </div>
   </section>
 
   <section class="wrap" id="resultats">
@@ -101,6 +119,40 @@
       <button class="btn-primary" id="confirm-yes" style="background:var(--red);">Supprimer</button>
       <button class="btn-ghost" id="confirm-no">Annuler</button>
     </div>
+  </div>
+</div>
+
+<!-- ---------- fiche détail d'un projet ---------- -->
+<div class="overlay" id="detail-overlay">
+  <div class="modal wide">
+    <div class="modal-head"><h3 id="d-title"></h3><button class="close-x" id="detail-close"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6 L18 18 M6 18 L18 6"/></svg></button></div>
+    <div class="detail-visual" id="detail-visual"></div>
+    <div class="detail-meta">
+      <span class="detail-cat" id="d-cat"></span>
+      <span class="detail-cat mono" id="d-detail"></span>
+    </div>
+    <div class="detail-tags" id="d-tags"></div>
+    <p class="detail-desc" id="d-desc"></p>
+
+    <div class="like-row">
+      <button type="button" class="like-btn" id="like-btn">
+        <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M12 21 C7 17 3 13.5 3 9.3 3 6.4 5.3 4 8.2 4 c1.7 0 3.2.8 3.8 2.1 C12.6 4.8 14.1 4 15.8 4 18.7 4 21 6.4 21 9.3 21 13.5 17 17 12 21Z"/></svg>
+        <span id="like-count">0</span>
+      </button>
+    </div>
+
+    <div class="detail-divider"></div>
+    <h4 style="font-family:'Fraunces',serif; font-size:16px; margin-bottom:14px;">Avis (<span id="d-comment-count">0</span>)</h4>
+
+    <form class="comment-form" id="comment-form">
+      <input type="text" id="c-author" placeholder="Ton prénom (optionnel)">
+      <textarea id="c-content" placeholder="Un avis, une question…" required></textarea>
+      <div><button type="submit" class="btn-primary">Publier</button></div>
+      <p class="form-error" id="comment-error"></p>
+    </form>
+
+    <div id="comment-list"></div>
+    <p class="comments-empty" id="comments-empty" style="display:none;">Aucun avis pour l'instant — sois le premier.</p>
   </div>
 </div>
 
@@ -218,6 +270,16 @@
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const STORAGE_BUCKET = 'project-images';
 
+  /* ---------------- identifiant visiteur (pour les likes) ---------------- */
+  function getClientId(){
+    try{
+      let id = localStorage.getItem('client_id');
+      if (!id){ id = 'c_' + Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('client_id', id); }
+      return id;
+    }catch(e){ return 'anon_' + Math.random().toString(36).slice(2); }
+  }
+  const CLIENT_ID = getClientId();
+
   /* ---------------- toasts / confirm ---------------- */
   function toast(msg, type=''){
     const el = document.createElement('div');
@@ -246,7 +308,9 @@
     gear: `<circle cx="12" cy="12" r="3"/><path d="M12 4 V6.5 M12 17.5 V20 M4 12 H6.5 M17.5 12 H20 M6.3 6.3 L8 8 M16 16 L17.7 17.7 M6.3 17.7 L8 16 M16 8 L17.7 6.3"/>`,
     camera: `<rect x="2" y="7" width="20" height="13" rx="2"/><circle cx="12" cy="13.5" r="3.6"/><path d="M8 7 L9.7 4 H14.3 L16 7"/>`,
     doc: `<path d="M5 4 H19 M5 9 H19 M5 14 H15 M5 19 H12"/>`,
-    lock: `<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>`
+    lock: `<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>`,
+    heart: `<path d="M12 21 C7 17 3 13.5 3 9.3 3 6.4 5.3 4 8.2 4 c1.7 0 3.2.8 3.8 2.1 C12.6 4.8 14.1 4 15.8 4 18.7 4 21 6.4 21 9.3 21 13.5 17 17 12 21Z"/>`,
+    bubble: `<path d="M4 5 H20 V16 H9 L5 20 V16 H4 Z"/>`
   };
   function pickIcon(cat){
     const c = (cat || '').toLowerCase();
@@ -262,22 +326,43 @@
   let ADMIN_PROJECTS = [];
   let session = null;
   let redeemedCode = null;
+  let likeCounts = {};     // { project_id: n }
+  let myLikes = new Set(); // project_id que CE visiteur a aimés
+  let commentCounts = {};  // { project_id: n }
+
+  /* ---------------- état des filtres / tri ---------------- */
+  const state = { query:'', category:null, tag:null, sort:'recent', access:'all' };
 
   /* ---------------- moteur de recherche local ---------------- */
   const STOPWORDS = new Set(["je","veux","la","le","les","de","des","du","un","une","et","ou","pour","avec","sur","dans","mon","ma","mes","voir","cherche","montre","tout","ce","qui","est","en","au","aux","d","l"]);
   function normalize(s){ return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
   function keywords(q){ return normalize(q).split(/[^a-z0-9]+/).filter(w => w.length > 1 && !STOPWORDS.has(w)); }
-  function localSearch(query, list){
-    const words = keywords(query);
-    if (words.length === 0) return list;
-    const scored = list.map(p => {
-      const title = normalize(p.title), cat = normalize(p.cat), desc = normalize(p.desc), tags = normalize((p.tags||[]).join(' '));
-      let score = 0;
-      words.forEach(w => { if (title.includes(w)) score += 3; if (tags.includes(w)) score += 2.5; if (cat.includes(w)) score += 2; if (desc.includes(w)) score += 1; });
-      return {p, score};
-    }).filter(x => x.score > 0);
-    scored.sort((a,b) => b.score - a.score);
-    return scored.map(x => x.p);
+  function textScore(p, words){
+    const title = normalize(p.title), cat = normalize(p.cat), desc = normalize(p.desc), tags = normalize((p.tags||[]).join(' '));
+    let score = 0;
+    words.forEach(w => { if (title.includes(w)) score += 3; if (tags.includes(w)) score += 2.5; if (cat.includes(w)) score += 2; if (desc.includes(w)) score += 1; });
+    return score;
+  }
+
+  /* ---------------- calcule la liste affichée ---------------- */
+  function computeList(){
+    let list = PROJECTS.slice();
+    if (session && state.access !== 'all') list = list.filter(p => p.visibility === state.access);
+    if (state.tag) list = list.filter(p => (p.tags||[]).includes(state.tag));
+    else if (state.category) list = list.filter(p => p.cat === state.category);
+
+    const words = keywords(state.query);
+    if (words.length){
+      list = list.map(p => ({p, score:textScore(p, words)})).filter(x => x.score > 0).sort((a,b)=>b.score-a.score).map(x=>x.p);
+    } else {
+      switch(state.sort){
+        case 'recent': list.sort((a,b) => new Date(b.created_at) - new Date(a.created_at)); break;
+        case 'oldest': list.sort((a,b) => new Date(a.created_at) - new Date(b.created_at)); break;
+        case 'likes': list.sort((a,b) => (likeCounts[b.id]||0) - (likeCounts[a.id]||0)); break;
+        case 'comments': list.sort((a,b) => (commentCounts[b.id]||0) - (commentCounts[a.id]||0)); break;
+      }
+    }
+    return list;
   }
 
   /* ---------------- rendu page publique ---------------- */
@@ -291,10 +376,23 @@
 
   function renderFilters(){
     const cats = [...new Set(PROJECTS.map(p => p.cat))];
-    filterRow.innerHTML = cats.map(c => `<button type="button" data-cat="${c}">${c}</button>`).join('');
-    filterRow.querySelectorAll('button').forEach(btn => btn.addEventListener('click', () => { input.value = btn.dataset.cat; runSearch(btn.dataset.cat); }));
+    filterRow.innerHTML = cats.map(c => `<button type="button" data-cat="${c}" class="${state.category===c?'active':''}">${c}</button>`).join('');
+    filterRow.querySelectorAll('button').forEach(btn => btn.addEventListener('click', () => {
+      state.category = (state.category === btn.dataset.cat) ? null : btn.dataset.cat;
+      state.tag = null;
+      renderFilters(); refresh();
+    }));
     const allCats = [...new Set(ADMIN_PROJECTS.map(p => p.cat))];
     catList.innerHTML = allCats.map(c => `<option value="${c}">`).join('');
+  }
+
+  function updateResultsHead(list){
+    if (state.query.trim()) resultsTitle.textContent = `Pour « ${state.query} »`;
+    else if (state.tag) resultsTitle.textContent = `Tag : ${state.tag}`;
+    else if (state.category) resultsTitle.textContent = state.category;
+    else resultsTitle.textContent = 'Tout';
+    const hasFilter = state.query.trim() || state.tag || state.category;
+    resetBtn.style.display = hasFilter ? 'inline-block' : 'none';
   }
 
   function renderCards(list){
@@ -306,6 +404,7 @@
       card.style.animationDelay = (i * 0.04) + 's';
       const visual = p.image_url ? `<img src="${p.image_url}" alt="${p.title}" loading="lazy">` : `<svg viewBox="0 0 24 24" stroke-width="1.6" fill="none">${ICONS[p.icon] || ICONS.cube}</svg>`;
       const badge = p.visibility === 'private' ? `<div class="card-badge"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" fill="none">${ICONS.lock}</svg>Accès limité</div>` : '';
+      const likeN = likeCounts[p.id] || 0, comN = commentCounts[p.id] || 0;
       card.innerHTML = `
         <div class="card-visual">${visual}${badge}</div>
         <div class="card-body">
@@ -314,18 +413,25 @@
           <p class="desc">${p.desc || ''}</p>
           <div class="card-tags">${(p.tags||[]).map(t => `<button type="button" class="tag" data-tag="${t}">${t}</button>`).join('')}</div>
           ${p.detail ? `<div class="detail mono">${p.detail}</div>` : ''}
+          <div class="card-stats">
+            <span><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8">${ICONS.heart}</svg>${likeN}</span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8">${ICONS.bubble}</svg>${comN}</span>
+          </div>
         </div>`;
+      card.addEventListener('click', () => openDetail(p.id));
       grid.appendChild(card);
     });
-    grid.querySelectorAll('.tag').forEach(t => t.addEventListener('click', () => { input.value = t.dataset.tag; runSearch(t.dataset.tag); }));
+    grid.querySelectorAll('.tag').forEach(t => t.addEventListener('click', (e) => {
+      e.stopPropagation();
+      state.tag = t.dataset.tag; state.category = null;
+      renderFilters(); refresh();
+    }));
   }
 
-  function showAll(){ resultsTitle.textContent = 'Tout'; resetBtn.style.display = 'none'; renderCards(PROJECTS); }
-  function runSearch(query){
-    if (!query.trim()){ showAll(); return; }
-    resultsTitle.textContent = `Pour « ${query} »`;
-    resetBtn.style.display = 'inline-block';
-    renderCards(localSearch(query, PROJECTS));
+  function refresh(){
+    const list = computeList();
+    updateResultsHead(list);
+    renderCards(list);
   }
 
   async function loadProjects(){
@@ -342,14 +448,34 @@
     }
   }
 
+  async function loadEngagement(){
+    const [{ data: likes }, { data: comments }] = await Promise.all([
+      sb.from('likes').select('project_id, client_id'),
+      sb.from('comments').select('project_id')
+    ]);
+    likeCounts = {}; myLikes = new Set(); commentCounts = {};
+    (likes||[]).forEach(l => { likeCounts[l.project_id] = (likeCounts[l.project_id]||0) + 1; if (l.client_id === CLIENT_ID) myLikes.add(l.project_id); });
+    (comments||[]).forEach(c => { commentCounts[c.project_id] = (commentCounts[c.project_id]||0) + 1; });
+  }
+
+  /* ---------------- recherche / filtres UI ---------------- */
   const form = document.getElementById('search-form');
   const input = document.getElementById('search-input');
-  form.addEventListener('submit', (e) => { e.preventDefault(); runSearch(input.value); });
-  resetBtn.addEventListener('click', () => { input.value=''; showAll(); });
+  form.addEventListener('submit', (e) => { e.preventDefault(); state.query = input.value; refresh(); });
+  resetBtn.addEventListener('click', () => { input.value=''; state.query=''; state.tag=null; state.category=null; renderFilters(); refresh(); });
   let searchDebounce;
-  input.addEventListener('input', () => { clearTimeout(searchDebounce); searchDebounce = setTimeout(() => runSearch(input.value), 300); });
+  input.addEventListener('input', () => { clearTimeout(searchDebounce); searchDebounce = setTimeout(() => { state.query = input.value; refresh(); }, 300); });
   document.addEventListener('keydown', (e) => {
     if (e.key === '/' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA'){ e.preventDefault(); input.focus(); }
+  });
+
+  document.getElementById('sort-select').addEventListener('change', (e) => { state.sort = e.target.value; refresh(); });
+  document.getElementById('access-toggle').querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.access = btn.dataset.access;
+      document.querySelectorAll('#access-toggle button').forEach(b => b.classList.toggle('active', b === btn));
+      refresh();
+    });
   });
 
   /* ---------------- code d'accès visiteur ---------------- */
@@ -371,7 +497,7 @@
     const banner = document.getElementById('access-banner');
     document.getElementById('access-banner-text').textContent = `Accès étendu actif — ${extra.length} projet(s) débloqué(s)`;
     banner.classList.add('show');
-    renderFilters(); showAll();
+    renderFilters(); refresh();
     if (showFeedback) toast('Accès débloqué', 'ok');
     return true;
   }
@@ -381,10 +507,106 @@
     const ok = await mergeRedeemed(code, true);
     if (ok) redeemOverlay.classList.remove('open');
   });
-  document.getElementById('access-clear').addEventListener('click', () => {
+  document.getElementById('access-clear').addEventListener('click', async () => {
     redeemedCode = null;
     document.getElementById('access-banner').classList.remove('show');
-    loadProjects().then(() => { renderFilters(); showAll(); });
+    await loadProjects(); await loadEngagement();
+    renderFilters(); refresh();
+  });
+
+  /* ---------------- fiche détail (likes + avis) ---------------- */
+  const detailOverlay = document.getElementById('detail-overlay');
+  let currentDetailId = null;
+  document.getElementById('detail-close').addEventListener('click', () => detailOverlay.classList.remove('open'));
+  detailOverlay.addEventListener('click', (e) => { if (e.target === detailOverlay) detailOverlay.classList.remove('open'); });
+
+  async function openDetail(id){
+    const p = PROJECTS.find(x => String(x.id) === String(id));
+    if (!p) return;
+    currentDetailId = p.id;
+    document.getElementById('d-title').textContent = p.title;
+    document.getElementById('d-cat').textContent = p.cat;
+    document.getElementById('d-detail').textContent = p.detail || '';
+    document.getElementById('d-desc').textContent = p.desc || '';
+    document.getElementById('d-tags').innerHTML = (p.tags||[]).map(t => `<span class="pill tagpill" style="font-size:11px; border:1px solid var(--line); border-radius:999px; padding:3px 10px; color:var(--ink-soft);">${t}</span>`).join('');
+    document.getElementById('detail-visual').innerHTML = p.image_url ? `<img src="${p.image_url}" alt="${p.title}">` : `<svg viewBox="0 0 24 24" stroke-width="1.4" fill="none">${ICONS[p.icon]||ICONS.cube}</svg>`;
+
+    updateLikeUI();
+    document.getElementById('comment-error').classList.remove('show');
+    document.getElementById('c-author').value = '';
+    document.getElementById('c-content').value = '';
+    await renderComments(p.id);
+    detailOverlay.classList.add('open');
+  }
+
+  function updateLikeUI(){
+    const btn = document.getElementById('like-btn');
+    const liked = myLikes.has(currentDetailId);
+    btn.classList.toggle('liked', liked);
+    document.getElementById('like-count').textContent = likeCounts[currentDetailId] || 0;
+  }
+
+  document.getElementById('like-btn').addEventListener('click', async () => {
+    if (!currentDetailId) return;
+    const id = currentDetailId;
+    const liked = myLikes.has(id);
+    if (liked){
+      myLikes.delete(id);
+      likeCounts[id] = Math.max(0, (likeCounts[id]||1) - 1);
+      updateLikeUI();
+      const { error } = await sb.from('likes').delete().eq('project_id', id).eq('client_id', CLIENT_ID);
+      if (error){ myLikes.add(id); likeCounts[id] = (likeCounts[id]||0) + 1; updateLikeUI(); toast('Erreur : ' + error.message, 'err'); }
+    } else {
+      myLikes.add(id);
+      likeCounts[id] = (likeCounts[id]||0) + 1;
+      updateLikeUI();
+      const { error } = await sb.from('likes').insert({ project_id:id, client_id:CLIENT_ID });
+      if (error){ myLikes.delete(id); likeCounts[id] = Math.max(0,(likeCounts[id]||1)-1); updateLikeUI(); toast('Erreur : ' + error.message, 'err'); }
+    }
+    refresh();
+  });
+
+  async function renderComments(projectId){
+    const { data, error } = await sb.from('comments').select('*').eq('project_id', projectId).order('created_at', {ascending:false});
+    const list = document.getElementById('comment-list');
+    const empty = document.getElementById('comments-empty');
+    document.getElementById('d-comment-count').textContent = (data||[]).length;
+    if (error || !data || data.length === 0){ list.innerHTML = ''; empty.style.display = 'block'; return; }
+    empty.style.display = 'none';
+    list.innerHTML = data.map(c => `
+      <div class="comment-item">
+        <div class="comment-head">
+          <span class="comment-author">${c.author_name ? c.author_name : 'Anonyme'}</span>
+          <span class="comment-date">${new Date(c.created_at).toLocaleDateString('fr-FR')}</span>
+        </div>
+        <p class="comment-text">${c.content}</p>
+        ${session ? `<button class="comment-del" data-id="${c.id}">supprimer</button>` : ''}
+      </div>`).join('');
+    list.querySelectorAll('.comment-del').forEach(btn => btn.addEventListener('click', async () => {
+      if (!(await confirmDialog('Supprimer cet avis ?'))) return;
+      await sb.from('comments').delete().eq('id', btn.dataset.id);
+      commentCounts[projectId] = Math.max(0, (commentCounts[projectId]||1) - 1);
+      await renderComments(projectId);
+      refresh();
+      toast('Avis supprimé', 'ok');
+    }));
+  }
+
+  document.getElementById('comment-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const author_name = document.getElementById('c-author').value.trim() || null;
+    const content = document.getElementById('c-content').value.trim();
+    const errBox = document.getElementById('comment-error');
+    if (!content){ errBox.textContent = 'Écris quelque chose avant de publier.'; errBox.classList.add('show'); return; }
+    const { error } = await sb.from('comments').insert({ project_id: currentDetailId, author_name, content });
+    if (error){ errBox.textContent = error.message; errBox.classList.add('show'); return; }
+    errBox.classList.remove('show');
+    commentCounts[currentDetailId] = (commentCounts[currentDetailId]||0) + 1;
+    document.getElementById('c-author').value = '';
+    document.getElementById('c-content').value = '';
+    await renderComments(currentDetailId);
+    refresh();
+    toast('Avis publié', 'ok');
   });
 
   /* ---------------- authentification ---------------- */
@@ -408,15 +630,19 @@
   });
 
   function renderHeader(){
+    const accessToggle = document.getElementById('access-toggle');
     if (session){
       headerActions.innerHTML = `
         <button class="icon-btn" id="admin-open-btn" title="Administration"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></button>
         <button class="icon-btn filled" id="logout-btn" title="Se déconnecter"><svg class="icon" viewBox="0 0 24 24"><path d="M9 21 H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4 M16 17 L21 12 L16 7 M21 12 H9"/></svg></button>`;
       document.getElementById('admin-open-btn').addEventListener('click', openAdminPanel);
       document.getElementById('logout-btn').addEventListener('click', () => sb.auth.signOut());
+      accessToggle.style.display = 'flex';
     } else {
       headerActions.innerHTML = `<button class="icon-btn" id="login-btn" title="Connexion"><svg class="icon" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></button>`;
       document.getElementById('login-btn').addEventListener('click', () => loginOverlay.classList.add('open'));
+      accessToggle.style.display = 'none';
+      state.access = 'all';
     }
   }
 
@@ -425,8 +651,9 @@
     renderHeader();
     if (!session) document.getElementById('admin-panel').classList.remove('open');
     await loadProjects();
+    await loadEngagement();
     renderFilters();
-    input.value.trim() ? runSearch(input.value) : showAll();
+    refresh();
   });
 
   /* ======================= PANEL D'ADMINISTRATION ======================= */
@@ -453,8 +680,12 @@
     const cats = {};
     ADMIN_PROJECTS.forEach(p => cats[p.cat] = (cats[p.cat]||0) + 1);
     const priv = ADMIN_PROJECTS.filter(p => p.visibility === 'private').length;
+    const totalLikes = Object.values(likeCounts).reduce((a,b)=>a+b,0);
+    const totalComments = Object.values(commentCounts).reduce((a,b)=>a+b,0);
     let html = `<div class="stat"><div class="num">${ADMIN_PROJECTS.length}</div><div class="lbl">Total</div></div>`;
     html += `<div class="stat"><div class="num">${priv}</div><div class="lbl">Privés</div></div>`;
+    html += `<div class="stat"><div class="num">${totalLikes}</div><div class="lbl">Likes</div></div>`;
+    html += `<div class="stat"><div class="num">${totalComments}</div><div class="lbl">Avis</div></div>`;
     Object.entries(cats).forEach(([c,n]) => html += `<div class="stat"><div class="num">${n}</div><div class="lbl">${c}</div></div>`);
     el.innerHTML = html;
   }
@@ -581,8 +812,8 @@
       const { error } = id ? await sb.from('projects').update(row).eq('id', id) : await sb.from('projects').insert(row);
       if (error) throw error;
 
-      await loadProjects();
-      renderFilters(); showAll(); renderOverview(); renderProjGrid();
+      await loadProjects(); await loadEngagement();
+      renderFilters(); refresh(); renderOverview(); renderProjGrid();
       toast(id ? 'Projet modifié' : 'Projet ajouté', 'ok');
       closeProjPanel();
     }catch(err){
@@ -598,8 +829,8 @@
     if (!(await confirmDialog('Supprimer ce projet définitivement ?'))) return;
     const { error } = await sb.from('projects').delete().eq('id', id);
     if (error){ toast('Erreur : ' + error.message, 'err'); return; }
-    await loadProjects();
-    renderFilters(); showAll(); renderOverview(); renderProjGrid();
+    await loadProjects(); await loadEngagement();
+    renderFilters(); refresh(); renderOverview(); renderProjGrid();
     toast('Projet supprimé', 'ok');
     closeProjPanel();
   });
@@ -678,8 +909,9 @@
     session = current;
     renderHeader();
     await loadProjects();
+    await loadEngagement();
     renderFilters();
-    showAll();
+    refresh();
   })();
 </script>
 

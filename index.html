@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Atelier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --paper:#FAF6EF;
+    --card:#FFFFFF;
+    --ink:#2B2A26;
+    --ink-soft:#8A8377;
+    --line:#EAE3D4;
+    --accent:#E4602E;
+    --accent-soft:#FBE3D6;
+    --radius:14px;
+    --maxw:920px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter', sans-serif;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;}
+  ::selection{background:var(--accent); color:#fff;}
+  .wrap{max-width:var(--maxw); margin:0 auto; padding:0 24px;}
+  .mono{font-family:'JetBrains Mono', monospace;}
+  button{font-family:inherit;}
+  svg.icon{width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round;}
+
+  /* ---------- header ---------- */
+  header{padding:24px 0;}
+  .nav-row{display:flex; align-items:center; justify-content:space-between; gap:16px;}
+  .logo{display:flex; align-items:center; gap:9px; text-decoration:none;}
+  .logo svg{width:20px; height:20px; stroke:var(--ink); fill:none; stroke-width:1.6;}
+  .logo span{font-family:'Fraunces', serif; font-weight:600; font-size:18px;}
+  .icon-btn{
+    width:36px; height:36px; border-radius:50%; border:1px solid var(--line); background:var(--card);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--ink-soft); transition:.15s;
+  }
+  .icon-btn:hover{border-color:var(--accent); color:var(--accent);}
+  .header-actions{display:flex; align-items:center; gap:8px;}
+
+  /* ---------- hero ---------- */
+  .hero{padding:72px 0 44px; text-align:center;}
+  h1{
+    font-family:'Fraunces', serif; font-weight:600;
+    font-size:clamp(24px, 3.6vw, 32px); line-height:1.35; max-width:32ch; margin:0 auto 32px;
+    color:var(--ink);
+  }
+  .search-box{max-width:540px; margin:0 auto;}
+  .search-field{
+    display:flex; align-items:center; gap:10px;
+    background:var(--card); border:1.5px solid var(--ink); border-radius:999px;
+    padding:6px 8px 6px 20px; box-shadow:0 2px 0 var(--line);
+  }
+  .search-field svg{stroke:var(--ink-soft); flex-shrink:0;}
+  .search-field input{
+    flex:1; border:none; background:none; outline:none;
+    font-family:'Inter', sans-serif; font-size:15px; color:var(--ink); padding:13px 0;
+  }
+  .search-field input::placeholder{color:#B7AFA0;}
+  .search-field button.go{
+    font-weight:600; font-size:14px; background:var(--accent); color:#fff; border:none; border-radius:999px;
+    padding:12px 20px; cursor:pointer; transition:.15s; white-space:nowrap;
+  }
+  .search-field button.go:hover{filter:brightness(1.06);}
+
+  /* ---------- filter row ---------- */
+  .filter-row{display:flex; gap:18px; justify-content:center; flex-wrap:wrap; margin-top:22px;}
+  .filter-row button{
+    background:none; border:none; font-size:13px; color:var(--ink-soft); cursor:pointer;
+    padding-bottom:2px; border-bottom:1.5px solid transparent;
+  }
+  .filter-row button:hover, .filter-row button.active{color:var(--ink); border-color:var(--accent);}
+
+  /* ---------- results ---------- */
+  section{padding:32px 0;}
+  .results-head{display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:22px; flex-wrap:wrap;}
+  .results-head h2{font-family:'Fraunces', serif; font-weight:600; font-size:18px; color:var(--ink-soft);}
+  .reset-link{font-size:13px; color:var(--accent); text-decoration:none; background:none; border:none; cursor:pointer;}
+
+  .status-line, .empty-line{font-size:13.5px; color:var(--ink-soft); text-align:center; padding:24px 0; display:none;}
+  .status-line.show, .empty-line.show{display:block;}
+  .status-line .dots::after{content:''; animation:dots 1.2s steps(4,end) infinite;}
+  @keyframes dots{0%{content:'';} 25%{content:'.';} 50%{content:'..';} 75%{content:'...';} 100%{content:'';}}
+
+  .grid{display:grid; grid-template-columns:repeat(2, 1fr); gap:18px;}
+  .card{
+    position:relative; background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:20px; opacity:0; transform:translateY(8px); animation:cardIn .4s ease forwards;
+    transition:box-shadow .2s, border-color .2s;
+  }
+  @keyframes cardIn{to{opacity:1; transform:translateY(0);}}
+  .card:hover{box-shadow:0 6px 18px rgba(43,42,38,0.07); border-color:#DCD3BF;}
+  .card-top{display:flex; align-items:flex-start; gap:13px; margin-bottom:12px;}
+  .card-icon{
+    width:38px; height:38px; border-radius:10px; background:var(--accent-soft);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .card-icon svg{width:20px; height:20px; stroke:#9A3E17;}
+  .card-body h3{font-family:'Fraunces', serif; font-weight:600; font-size:16px; margin-bottom:4px;}
+  .card-cat{font-size:11px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.04em;}
+  .card p.desc{font-size:13.5px; color:var(--ink-soft); margin-bottom:12px;}
+  .card-tags{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px;}
+  .card-tags .tag{
+    font-size:11px; color:var(--ink-soft); border:1px solid var(--line); border-radius:999px;
+    padding:3px 10px; cursor:pointer; background:none;
+  }
+  .card-tags .tag:hover{border-color:var(--accent); color:var(--accent);}
+  .card .detail{font-size:11.5px; color:#B7AFA0;}
+  .card-admin{position:absolute; top:14px; right:14px; display:none; gap:6px;}
+  .card-admin.show{display:flex;}
+  .card-admin button{
+    width:28px; height:28px; border-radius:50%; border:1px solid var(--line); background:var(--card);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--ink-soft);
+  }
+  .card-admin button:hover{border-color:var(--accent); color:var(--accent);}
+  .card-admin svg{width:14px; height:14px;}
+
+  /* ---------- floating add button ---------- */
+  #fab-add{
+    position:fixed; bottom:26px; right:26px; width:52px; height:52px; border-radius:50%;
+    background:var(--accent); color:#fff; border:none; display:none; align-items:center; justify-content:center;
+    cursor:pointer; box-shadow:0 6px 20px rgba(228,96,46,0.35); z-index:20;
+  }
+  #fab-add.show{display:flex;}
+  #fab-add svg{width:22px; height:22px; stroke:#fff;}
+
+  /* ---------- about / contact ---------- */
+  #apropos p{color:var(--ink-soft); font-size:15px; max-width:60ch;}
+  #apropos h2{font-family:'Fraunces', serif; font-weight:600; font-size:19px; margin-bottom:12px;}
+  #contact{text-align:center;}
+  #contact p{color:var(--ink-soft); margin-bottom:12px;}
+  #contact a.mail{font-family:'Fraunces', serif; font-weight:600; font-size:18px; color:var(--accent); text-decoration:none; border-bottom:2px solid var(--accent-soft);}
+  footer{border-top:1px solid var(--line); padding:22px 0; text-align:center;}
+  footer p{font-size:12px; color:var(--ink-soft);}
+
+  /* ---------- modals ---------- */
+  .overlay{position:fixed; inset:0; background:rgba(43,42,38,0.35); display:none; align-items:flex-start; justify-content:center; padding:60px 16px; z-index:50; overflow-y:auto;}
+  .overlay.open{display:flex;}
+  .modal{background:var(--card); border-radius:16px; max-width:460px; width:100%; padding:28px 26px; margin-bottom:40px;}
+  .modal-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;}
+  .modal h3{font-family:'Fraunces', serif; font-size:18px;}
+  .modal .sub{font-size:12.5px; color:var(--ink-soft); margin-bottom:20px;}
+  .field{margin-bottom:13px;}
+  .field label{display:block; font-size:12.5px; color:var(--ink-soft); margin-bottom:5px;}
+  .field input, .field textarea{
+    width:100%; border:1px solid var(--line); border-radius:8px; padding:10px 12px;
+    font-family:'Inter', sans-serif; font-size:14px; background:var(--paper); outline:none;
+  }
+  .field input:focus, .field textarea:focus{border-color:var(--accent);}
+  .field textarea{resize:vertical; min-height:56px;}
+  .field-row{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  .modal-actions{display:flex; gap:10px; margin-top:18px; flex-wrap:wrap;}
+  .btn-primary{background:var(--accent); color:#fff; border:none; border-radius:8px; padding:11px 18px; font-size:13.5px; font-weight:600; cursor:pointer;}
+  .btn-ghost{background:none; border:1px solid var(--line); border-radius:8px; padding:11px 18px; font-size:13.5px; cursor:pointer; color:var(--ink);}
+  .btn-danger{background:none; border:1px solid #E4602E44; color:var(--accent); border-radius:8px; padding:11px 14px; font-size:13.5px; cursor:pointer;}
+  .form-error{font-size:12.5px; color:#C0392B; margin-top:8px; display:none;}
+  .form-error.show{display:block;}
+  .close-x{background:none; border:none; cursor:pointer; color:var(--ink-soft); padding:4px;}
+
+  @media (max-width: 620px){
+    .grid{grid-template-columns:1fr;}
+    .search-field{flex-wrap:wrap; padding:14px; border-radius:18px;}
+    .search-field input{width:100%; padding:6px 0;}
+    .search-field button.go{width:100%;}
+    .field-row{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<header class="wrap nav-row">
+  <a href="#top" class="logo">
+    <svg viewBox="0 0 24 24"><path d="M12 2 L21 7 L21 17 L12 22 L3 17 L3 7 Z"/><path d="M12 22 L12 12 M12 12 L21 7 M12 12 L3 7"/></svg>
+    <span>Atelier</span>
+  </a>
+  <div class="header-actions" id="header-actions">
+    <button class="icon-btn" id="login-btn" title="Connexion" aria-label="Connexion">
+      <svg class="icon" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="top">
+
+  <section class="hero wrap">
+    <h1>Cherche un projet, une photo, un article.</h1>
+    <div class="search-box">
+      <form id="search-form" class="search-field">
+        <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21 L16.65 16.65"/></svg>
+        <input id="search-input" type="text" autocomplete="off" placeholder="décris ce que tu cherches…">
+        <button type="submit" class="go">Chercher</button>
+      </form>
+    </div>
+    <div class="filter-row" id="filter-row"></div>
+  </section>
+
+  <section class="wrap" id="resultats">
+    <div class="results-head">
+      <h2 id="results-title">Tout</h2>
+      <button class="reset-link" id="reset-btn" style="display:none;">← revenir à tout</button>
+    </div>
+
+    <p class="status-line" id="status-line"><span class="dots">Chargement</span></p>
+    <p class="empty-line" id="empty-line">Rien trouvé pour ça — essaie une autre façon de le dire, ou reviens à tout.</p>
+
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <section class="wrap" id="apropos">
+    <h2>À propos</h2>
+    <p>Remplace ce paragraphe par ta propre histoire : depuis quand tu modélises, ce que tu aimes construire, ce que tu utilises au quotidien.</p>
+  </section>
+
+  <section class="wrap" id="contact">
+    <p>Une idée, une question ?</p>
+    <a class="mail" href="mailto:ton.email@exemple.com">ton.email@exemple.com</a>
+  </section>
+
+  <footer class="wrap"><p>Atelier — 2026</p></footer>
+</main>
+
+<button id="fab-add" title="Ajouter un projet" aria-label="Ajouter un projet">
+  <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" fill="none"><path d="M12 5 V19 M5 12 H19"/></svg>
+</button>
+
+<!-- ---------- connexion ---------- -->
+<div class="overlay" id="login-overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Connexion</h3>
+      <button class="close-x" id="login-close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6 L18 18 M6 18 L18 6"/></svg>
+      </button>
+    </div>
+    <p class="sub">Réservé à l'administrateur du site.</p>
+    <form id="login-form">
+      <div class="field"><label>Email</label><input type="email" id="l-email" required></div>
+      <div class="field"><label>Mot de passe</label><input type="password" id="l-pass" required></div>
+      <div class="modal-actions"><button type="submit" class="btn-primary">Se connecter</button></div>
+      <p class="form-error" id="login-error">Identifiants incorrects.</p>
+    </form>
+  </div>
+</div>
+
+<!-- ---------- ajout / édition ---------- -->
+<div class="overlay" id="edit-overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="edit-title">Ajouter un projet</h3>
+      <button class="close-x" id="edit-close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6 L18 18 M6 18 L18 6"/></svg>
+      </button>
+    </div>
+    <form id="edit-form">
+      <input type="hidden" id="f-id">
+      <div class="field"><label>Titre</label><input type="text" id="f-title" required></div>
+      <div class="field-row">
+        <div class="field"><label>Catégorie</label><input type="text" id="f-cat" list="cat-list" required></div>
+        <div class="field"><label>Détail (optionnel)</label><input type="text" id="f-detail" placeholder="ex. 110×70×45mm"></div>
+      </div>
+      <datalist id="cat-list"></datalist>
+      <div class="field"><label>Tags (séparés par des virgules)</label><input type="text" id="f-tags"></div>
+      <div class="field"><label>Description</label><textarea id="f-desc"></textarea></div>
+      <div class="modal-actions">
+        <button type="submit" class="btn-primary" id="edit-submit">Ajouter</button>
+        <button type="button" class="btn-danger" id="edit-delete" style="display:none;">Supprimer</button>
+      </div>
+      <p class="form-error" id="edit-error">Une erreur est survenue.</p>
+    </form>
+  </div>
+</div>
+
+<script>
+  /* =======================================================
+     1) BRANCHEMENT SUPABASE — à remplir après création du projet
+     ======================================================= */
+  const SUPABASE_URL = "https://ktqtvgxmhjzwbsaretzy.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt0cXR2Z3htaGp6d2JzYXJldHp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyNzc5NTUsImV4cCI6MjEwMjg1Mzk1NX0.iJCcEkgwPR-d8bR_nuNSOBJ_9SbkyLhfE7Dk2LmtfeQ";
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  /* ---------------- icônes de catégorie ---------------- */
+  const ICONS = {
+    cube: `<path d="M12 2 L21 7 L21 17 L12 22 L3 17 L3 7 Z"/><path d="M12 22 L12 12 M12 12 L21 7 M12 12 L3 7"/>`,
+    battery: `<rect x="3" y="8" width="15" height="9" rx="2"/><rect x="18" y="11" width="3" height="3" rx="0.5"/><path d="M10 8 L7 13 H11 L8 18"/>`,
+    housing: `<rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="12" cy="12" r="4"/><path d="M12 4 V7 M12 17 V20 M4 12 H7 M17 12 H20"/>`,
+    gear: `<circle cx="12" cy="12" r="3"/><path d="M12 4 V6.5 M12 17.5 V20 M4 12 H6.5 M17.5 12 H20 M6.3 6.3 L8 8 M16 16 L17.7 17.7 M6.3 17.7 L8 16 M16 8 L17.7 6.3"/>`,
+    camera: `<rect x="2" y="7" width="20" height="13" rx="2"/><circle cx="12" cy="13.5" r="3.6"/><path d="M8 7 L9.7 4 H14.3 L16 7"/>`,
+    doc: `<path d="M5 4 H19 M5 9 H19 M5 14 H15 M5 19 H12"/>`
+  };
+  function pickIcon(cat){
+    const c = (cat || '').toLowerCase();
+    if (c.includes('photo')) return 'camera';
+    if (c.includes('article') || c.includes('journal') || c.includes('blog')) return 'doc';
+    if (c.includes('électro') || c.includes('electro') || c.includes('boit')) return 'housing';
+    if (c.includes('méca') || c.includes('meca') || c.includes('engrenage')) return 'gear';
+    if (c.includes('batt') || c.includes('lipo')) return 'battery';
+    return 'cube';
+  }
+
+  let PROJECTS = [];
+  let session = null;
+
+  /* ---------------- moteur de recherche local ---------------- */
+  const STOPWORDS = new Set(["je","veux","la","le","les","de","des","du","un","une","et","ou","pour",
+    "avec","sur","dans","mon","ma","mes","voir","cherche","montre","tout","ce","qui","est","en","au","aux","d","l"]);
+  function normalize(s){ return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+  function keywords(q){ return normalize(q).split(/[^a-z0-9]+/).filter(w => w.length > 1 && !STOPWORDS.has(w)); }
+  function localSearch(query){
+    const words = keywords(query);
+    if (words.length === 0) return PROJECTS;
+    const scored = PROJECTS.map(p => {
+      const title = normalize(p.title), cat = normalize(p.cat), desc = normalize(p.desc), tags = normalize((p.tags||[]).join(' '));
+      let score = 0;
+      words.forEach(w => {
+        if (title.includes(w)) score += 3;
+        if (tags.includes(w)) score += 2.5;
+        if (cat.includes(w)) score += 2;
+        if (desc.includes(w)) score += 1;
+      });
+      return {p, score};
+    }).filter(x => x.score > 0);
+    scored.sort((a,b) => b.score - a.score);
+    return scored.map(x => x.p);
+  }
+
+  /* ---------------- rendu ---------------- */
+  const grid = document.getElementById('grid');
+  const statusLine = document.getElementById('status-line');
+  const emptyLine = document.getElementById('empty-line');
+  const resultsTitle = document.getElementById('results-title');
+  const resetBtn = document.getElementById('reset-btn');
+  const filterRow = document.getElementById('filter-row');
+  const catList = document.getElementById('cat-list');
+  const fabAdd = document.getElementById('fab-add');
+
+  function renderFilters(){
+    const cats = [...new Set(PROJECTS.map(p => p.cat))];
+    filterRow.innerHTML = cats.map(c => `<button type="button" data-cat="${c}">${c}</button>`).join('');
+    filterRow.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => { input.value = btn.dataset.cat; runSearch(btn.dataset.cat); });
+    });
+    catList.innerHTML = cats.map(c => `<option value="${c}">`).join('');
+  }
+
+  function renderCards(list){
+    grid.innerHTML = '';
+    emptyLine.classList.toggle('show', list.length === 0);
+    list.forEach((p, i) => {
+      const card = document.createElement('article');
+      card.className = 'card';
+      card.style.animationDelay = (i * 0.04) + 's';
+      card.innerHTML = `
+        ${session ? `<div class="card-admin show">
+          <button class="edit-btn" data-id="${p.id}" title="Modifier"><svg class="icon" viewBox="0 0 24 24"><path d="M12 20 H21 M16.5 3.5 a2.1 2.1 0 0 1 3 3 L7 19 l-4 1 1-4 Z"/></svg></button>
+        </div>` : ''}
+        <div class="card-top">
+          <div class="card-icon"><svg viewBox="0 0 24 24" stroke-width="1.6" fill="none">${ICONS[p.icon] || ICONS.cube}</svg></div>
+          <div class="card-body">
+            <div class="card-cat">${p.cat}</div>
+            <h3>${p.title}</h3>
+          </div>
+        </div>
+        <p class="desc">${p.desc || ''}</p>
+        <div class="card-tags">${(p.tags||[]).map(t => `<button type="button" class="tag" data-tag="${t}">${t}</button>`).join('')}</div>
+        ${p.detail ? `<div class="detail mono">${p.detail}</div>` : ''}`;
+      grid.appendChild(card);
+    });
+    grid.querySelectorAll('.tag').forEach(t => t.addEventListener('click', () => { input.value = t.dataset.tag; runSearch(t.dataset.tag); }));
+    grid.querySelectorAll('.edit-btn').forEach(b => b.addEventListener('click', () => openEdit(b.dataset.id)));
+  }
+
+  function showAll(){ resultsTitle.textContent = 'Tout'; resetBtn.style.display = 'none'; renderCards(PROJECTS); }
+  function runSearch(query){
+    if (!query.trim()){ showAll(); return; }
+    resultsTitle.textContent = `Pour « ${query} »`;
+    resetBtn.style.display = 'inline-block';
+    renderCards(localSearch(query));
+  }
+
+  /* ---------------- chargement des données (Supabase) ---------------- */
+  async function loadProjects(){
+    statusLine.classList.add('show');
+    const { data, error } = await sb.from('projects').select('*').order('created_at', {ascending:false});
+    statusLine.classList.remove('show');
+    if (error){ console.error(error); PROJECTS = []; return; }
+    PROJECTS = data.map(r => ({...r, desc:r.description}));
+  }
+
+  const form = document.getElementById('search-form');
+  const input = document.getElementById('search-input');
+  form.addEventListener('submit', (e) => { e.preventDefault(); runSearch(input.value); });
+  resetBtn.addEventListener('click', () => { input.value=''; showAll(); });
+
+  /* ---------------- authentification ---------------- */
+  const loginOverlay = document.getElementById('login-overlay');
+  const loginBtn = document.getElementById('login-btn');
+  const headerActions = document.getElementById('header-actions');
+
+  loginBtn.addEventListener('click', () => {
+    if (session) { sb.auth.signOut(); return; }
+    loginOverlay.classList.add('open');
+  });
+  document.getElementById('login-close').addEventListener('click', () => loginOverlay.classList.remove('open'));
+  loginOverlay.addEventListener('click', (e) => { if (e.target === loginOverlay) loginOverlay.classList.remove('open'); });
+
+  document.getElementById('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('l-email').value.trim();
+    const password = document.getElementById('l-pass').value;
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    const errBox = document.getElementById('login-error');
+    if (error){ errBox.classList.add('show'); return; }
+    errBox.classList.remove('show');
+    loginOverlay.classList.remove('open');
+    e.target.reset();
+  });
+
+  function applyAuthState(newSession){
+    session = newSession;
+    if (session){
+      loginBtn.innerHTML = `<svg class="icon" viewBox="0 0 24 24"><path d="M9 21 H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4 M16 17 L21 12 L16 7 M21 12 H9"/></svg>`;
+      loginBtn.title = 'Se déconnecter';
+      fabAdd.classList.add('show');
+    } else {
+      loginBtn.innerHTML = `<svg class="icon" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>`;
+      loginBtn.title = 'Connexion';
+      fabAdd.classList.remove('show');
+    }
+    renderCards(currentList());
+  }
+  function currentList(){
+    const q = input.value.trim();
+    return q ? localSearch(q) : PROJECTS;
+  }
+
+  sb.auth.onAuthStateChange((_event, newSession) => applyAuthState(newSession));
+
+  /* ---------------- ajout / édition / suppression ---------------- */
+  const editOverlay = document.getElementById('edit-overlay');
+  const editTitle = document.getElementById('edit-title');
+  const editSubmit = document.getElementById('edit-submit');
+  const editDelete = document.getElementById('edit-delete');
+  const editError = document.getElementById('edit-error');
+
+  function openAdd(){
+    editTitle.textContent = 'Ajouter un projet';
+    editSubmit.textContent = 'Ajouter';
+    editDelete.style.display = 'none';
+    document.getElementById('edit-form').reset();
+    document.getElementById('f-id').value = '';
+    editError.classList.remove('show');
+    editOverlay.classList.add('open');
+  }
+  function openEdit(id){
+    const p = PROJECTS.find(x => String(x.id) === String(id));
+    if (!p) return;
+    editTitle.textContent = 'Modifier le projet';
+    editSubmit.textContent = 'Enregistrer';
+    editDelete.style.display = 'inline-block';
+    document.getElementById('f-id').value = p.id;
+    document.getElementById('f-title').value = p.title;
+    document.getElementById('f-cat').value = p.cat;
+    document.getElementById('f-detail').value = p.detail || '';
+    document.getElementById('f-tags').value = (p.tags||[]).join(', ');
+    document.getElementById('f-desc').value = p.desc || '';
+    editError.classList.remove('show');
+    editOverlay.classList.add('open');
+  }
+  fabAdd.addEventListener('click', openAdd);
+  document.getElementById('edit-close').addEventListener('click', () => editOverlay.classList.remove('open'));
+  editOverlay.addEventListener('click', (e) => { if (e.target === editOverlay) editOverlay.classList.remove('open'); });
+
+  document.getElementById('edit-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('f-id').value;
+    const title = document.getElementById('f-title').value.trim();
+    const cat = document.getElementById('f-cat').value.trim();
+    const detail = document.getElementById('f-detail').value.trim();
+    const tags = document.getElementById('f-tags').value.split(',').map(t => t.trim()).filter(Boolean);
+    const description = document.getElementById('f-desc').value.trim();
+    if (!title || !cat) return;
+    const row = { title, cat, detail, tags, description, icon: pickIcon(cat) };
+
+    const { error } = id
+      ? await sb.from('projects').update(row).eq('id', id)
+      : await sb.from('projects').insert(row);
+
+    if (error){ editError.textContent = error.message; editError.classList.add('show'); return; }
+    editOverlay.classList.remove('open');
+    await loadProjects();
+    renderFilters();
+    showAll();
+  });
+
+  editDelete.addEventListener('click', async () => {
+    const id = document.getElementById('f-id').value;
+    if (!id || !confirm('Supprimer ce projet ?')) return;
+    const { error } = await sb.from('projects').delete().eq('id', id);
+    if (error){ editError.textContent = error.message; editError.classList.add('show'); return; }
+    editOverlay.classList.remove('open');
+    await loadProjects();
+    renderFilters();
+    showAll();
+  });
+
+  /* ---------------- démarrage ---------------- */
+  (async () => {
+    const { data: { session: current } } = await sb.auth.getSession();
+    session = current;
+    await loadProjects();
+    renderFilters();
+    showAll();
+    applyAuthState(session);
+  })();
+</script>
+
+</body>
+</html>

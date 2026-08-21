@@ -420,7 +420,7 @@
     const password = document.getElementById('l-pass').value;
     const { error } = await sb.auth.signInWithPassword({ email, password });
     const errBox = document.getElementById('login-error');
-    if (error){ errBox.classList.add('show'); return; }
+    if (error){ errBox.textContent = error.message; errBox.classList.add('show'); return; }
     errBox.classList.remove('show');
     loginOverlay.classList.remove('open');
     e.target.reset();

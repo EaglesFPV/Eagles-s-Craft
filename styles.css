@@ -146,9 +146,6 @@ footer p{font-size:12px; color:var(--ink-soft);}
 #admin-panel.open{display:flex;}
 .admin-topbar{display:flex; align-items:center; justify-content:space-between; padding:16px 28px; border-bottom:1px solid var(--line); background:var(--card); flex-shrink:0;}
 .admin-topbar h2{font-family:'Fraunces', serif; font-size:19px;}
-.admin-tabs{display:flex; gap:4px; padding:0 28px; border-bottom:1px solid var(--line); background:var(--card); flex-shrink:0; overflow-x:auto;}
-.admin-tab{padding:13px 16px; font-size:13.5px; color:var(--ink-soft); background:none; border:none; cursor:pointer; border-bottom:2px solid transparent; white-space:nowrap;}
-.admin-tab.active{color:var(--ink); border-color:var(--accent); font-weight:600;}
 .admin-body{flex:1; overflow-y:auto; padding:28px;}
 .admin-view{display:none; max-width:1180px; margin:0 auto;}
 .admin-view.active{display:block;}
@@ -222,7 +219,7 @@ footer p{font-size:12px; color:var(--ink-soft);}
   .search-field button.go{width:100%;}
   .field-row{grid-template-columns:1fr;}
   .admin-body{padding:18px;}
-  .admin-topbar, .admin-tabs{padding-left:18px; padding-right:18px;}
+  .admin-topbar{padding-left:18px; padding-right:18px;}
   #proj-panel{width:100vw; max-width:100vw;}
 }
 
@@ -266,3 +263,73 @@ footer p{font-size:12px; color:var(--ink-soft);}
 .comment-del{background:none; border:none; color:var(--ink-faint); cursor:pointer; font-size:11px; flex-shrink:0;}
 .comment-del:hover{color:var(--red);}
 .comments-empty{font-size:13px; color:var(--ink-soft); padding:6px 0 14px;}
+
+/* ---------- vrai menu de filtre (accueil) ---------- */
+.filters-toolbar{display:flex; align-items:center; justify-content:center; gap:10px; margin-top:22px; position:relative; flex-wrap:wrap;}
+.filter-toggle-btn{
+  display:flex; align-items:center; gap:8px; background:var(--card); border:1px solid var(--line); border-radius:999px;
+  padding:10px 18px; font-size:13px; color:var(--ink); cursor:pointer; transition:.15s;
+}
+.filter-toggle-btn:hover{border-color:var(--accent); color:var(--accent);}
+.filter-toggle-btn svg{width:15px; height:15px; stroke:currentColor;}
+.filter-count{background:var(--accent); color:#fff; font-size:10.5px; border-radius:999px; padding:1px 7px; font-family:'JetBrains Mono',monospace;}
+
+.filter-panel{
+  position:absolute; top:calc(100% + 10px); left:50%; transform:translateX(-50%);
+  background:var(--card); border:1px solid var(--line); border-radius:14px; box-shadow:0 12px 32px rgba(0,0,0,0.14);
+  width:340px; max-width:92vw; padding:20px; z-index:40; display:none; text-align:left;
+}
+.filter-panel.open{display:block;}
+.filter-section{margin-bottom:18px;}
+.filter-section:last-child{margin-bottom:0;}
+.filter-section h4{font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); margin-bottom:10px;}
+.filter-options{display:flex; flex-wrap:wrap; gap:8px;}
+.filter-chip{
+  font-size:12.5px; border:1px solid var(--line); border-radius:999px; padding:6px 13px; background:var(--paper);
+  color:var(--ink-soft); cursor:pointer; transition:.15s;
+}
+.filter-chip:hover{border-color:var(--accent);}
+.filter-chip.active{background:var(--accent); border-color:var(--accent); color:#fff; font-weight:500;}
+.filter-radio-list{display:flex; flex-direction:column; gap:2px;}
+.filter-radio-list label{display:flex; align-items:center; gap:9px; font-size:13px; padding:7px 6px; border-radius:8px; cursor:pointer; color:var(--ink);}
+.filter-radio-list label:hover{background:var(--paper);}
+.filter-radio-list input{accent-color:var(--accent);}
+.filter-panel-foot{display:flex; justify-content:space-between; align-items:center; margin-top:18px; padding-top:16px; border-top:1px solid var(--line);}
+.filter-panel-foot button{font-size:12.5px; background:none; border:none; cursor:pointer;}
+#filter-reset-all{color:var(--ink-soft);}
+#filter-reset-all:hover{color:var(--red);}
+#filter-apply{color:var(--accent); font-weight:600;}
+
+.active-chips{display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-top:16px;}
+.active-chip{
+  display:flex; align-items:center; gap:6px; background:var(--accent-soft); color:var(--accent-ink);
+  border-radius:999px; padding:5px 8px 5px 13px; font-size:12px;
+}
+.active-chip button{background:none; border:none; color:var(--accent-ink); cursor:pointer; display:flex; padding:2px;}
+.active-chip svg{width:11px; height:11px;}
+
+/* ---------- panel d'administration en sidebar ---------- */
+.admin-shell{flex:1; display:flex; min-height:0;}
+.admin-sidebar{width:210px; flex-shrink:0; border-right:1px solid var(--line); background:var(--card); padding:18px 12px; display:flex; flex-direction:column; gap:2px;}
+.admin-sidebar button{
+  display:flex; align-items:center; gap:10px; text-align:left; background:none; border:none; border-radius:9px;
+  padding:11px 12px; font-size:13.5px; color:var(--ink-soft); cursor:pointer; transition:.15s;
+}
+.admin-sidebar button:hover{background:var(--paper); color:var(--ink);}
+.admin-sidebar button.active{background:var(--accent-soft); color:var(--accent-ink); font-weight:600;}
+.admin-sidebar button svg{width:16px; height:16px; stroke:currentColor; flex-shrink:0;}
+.admin-main{flex:1; overflow-y:auto; padding:28px 32px; min-width:0;}
+
+.mod-table{width:100%; border-collapse:collapse;}
+.mod-table th{text-align:left; font-size:11px; text-transform:uppercase; color:var(--ink-soft); padding:8px 10px; border-bottom:1px solid var(--line);}
+.mod-table td{padding:10px; border-bottom:1px solid var(--line); font-size:13px; vertical-align:top;}
+.mod-table .mt-content{max-width:340px; color:var(--ink-soft);}
+.mod-table .mt-proj{font-weight:500; white-space:nowrap;}
+.mod-table button{background:none; border:1px solid var(--line); border-radius:6px; padding:5px 10px; font-size:12px; cursor:pointer; color:var(--ink-soft);}
+.mod-table button:hover{border-color:var(--red); color:var(--red);}
+
+@media (max-width: 900px){
+  .admin-shell{flex-direction:column;}
+  .admin-sidebar{width:100%; flex-direction:row; overflow-x:auto; border-right:none; border-bottom:1px solid var(--line); padding:10px 12px;}
+  .admin-main{padding:20px;}
+}

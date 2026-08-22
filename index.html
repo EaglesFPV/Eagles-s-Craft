@@ -10,9 +10,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css?v=3">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="theme.js" defer></script>
+<script src="theme.js?v=3" defer></script>
 </head>
 <body>
 
@@ -54,29 +54,56 @@
         <button type="button" id="access-clear">désactiver</button>
       </div>
     </div>
-    <div class="filter-row" id="filter-row"></div>
-    <div class="filter-bar" id="filter-bar">
-      <select id="sort-select">
-        <option value="recent">Plus récents</option>
-        <option value="oldest">Plus anciens</option>
-        <option value="likes">Plus aimés</option>
-        <option value="comments">Plus commentés</option>
-      </select>
-      <div class="access-toggle" id="access-toggle" style="display:none;">
-        <button type="button" data-access="all" class="active">Tous</button>
-        <button type="button" data-access="public">Public</button>
-        <button type="button" data-access="private">Privé</button>
+
+    <div class="filters-toolbar">
+      <button type="button" class="filter-toggle-btn" id="filter-toggle">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M4 6 H20 M7 12 H17 M10 18 H14"/></svg>
+        Filtres
+        <span class="filter-count" id="filter-count" style="display:none;">0</span>
+      </button>
+
+      <div class="filter-panel" id="filter-panel">
+        <div class="filter-section">
+          <h4>Trier par</h4>
+          <div class="filter-radio-list" id="sort-options">
+            <label><input type="radio" name="sort" value="recent" checked> Plus récents</label>
+            <label><input type="radio" name="sort" value="oldest"> Plus anciens</label>
+            <label><input type="radio" name="sort" value="likes"> Plus aimés</label>
+            <label><input type="radio" name="sort" value="comments"> Plus commentés</label>
+          </div>
+        </div>
+        <div class="filter-section">
+          <h4>Catégorie</h4>
+          <div class="filter-options" id="cat-options"></div>
+        </div>
+        <div class="filter-section" id="tag-section" style="display:none;">
+          <h4>Tags</h4>
+          <div class="filter-options" id="tag-options"></div>
+        </div>
+        <div class="filter-section" id="access-section" style="display:none;">
+          <h4>Accessibilité</h4>
+          <div class="filter-radio-list" id="access-options">
+            <label><input type="radio" name="access" value="all" checked> Tous</label>
+            <label><input type="radio" name="access" value="public"> Public</label>
+            <label><input type="radio" name="access" value="private"> Privé</label>
+          </div>
+        </div>
+        <div class="filter-panel-foot">
+          <button type="button" id="filter-reset-all">Réinitialiser</button>
+          <button type="button" id="filter-apply">Fermer</button>
+        </div>
       </div>
     </div>
+
+    <div class="active-chips" id="active-chips"></div>
   </section>
 
   <section class="wrap" id="resultats">
     <div class="results-head">
       <h2 id="results-title">Tout</h2>
-      <button class="reset-link" id="reset-btn" style="display:none;">← revenir à tout</button>
     </div>
     <p class="status-line" id="status-line"><span class="dots">Chargement</span></p>
-    <p class="empty-line" id="empty-line">Rien trouvé pour ça — essaie une autre façon de le dire, ou reviens à tout.</p>
+    <p class="empty-line" id="empty-line">Rien trouvé pour ça — essaie une autre façon de le dire, ou change tes filtres.</p>
     <div class="grid" id="grid"></div>
   </section>
 
@@ -162,52 +189,74 @@
     <h2>Administration</h2>
     <button class="icon-btn" id="admin-close" title="Fermer"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6 L18 18 M6 18 L18 6"/></svg></button>
   </div>
-  <div class="admin-tabs">
-    <button class="admin-tab active" data-view="overview">Vue d'ensemble</button>
-    <button class="admin-tab" data-view="projects">Projets</button>
-    <button class="admin-tab" data-view="access">Accès</button>
-  </div>
-  <div class="admin-body">
-
-    <div class="admin-view active" id="view-overview">
-      <div class="dash-stats" id="dash-stats"></div>
-      <p style="font-size:13.5px; color:var(--ink-soft); max-width:60ch;">Onglet <strong>Projets</strong> pour ajouter, modifier ou supprimer un projet (photo comprise). Onglet <strong>Accès</strong> pour gérer qui peut voir ton contenu privé.</p>
+  <div class="admin-shell">
+    <div class="admin-sidebar">
+      <button class="admin-tab active" data-view="overview">
+        <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        Vue d'ensemble
+      </button>
+      <button class="admin-tab" data-view="projects">
+        <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 15 L8 10 L12 14 L16 10 L21 15"/><circle cx="8" cy="7" r="1.5"/></svg>
+        Projets
+      </button>
+      <button class="admin-tab" data-view="moderation">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M4 5 H20 V16 H9 L5 20 V16 H4 Z"/></svg>
+        Avis
+      </button>
+      <button class="admin-tab" data-view="access">
+        <svg class="icon" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+        Accès
+      </button>
     </div>
 
-    <div class="admin-view" id="view-projects">
-      <div class="proj-toolbar">
-        <input type="text" id="proj-search" placeholder="filtrer les projets…">
+    <div class="admin-main">
+      <div class="admin-view active" id="view-overview">
+        <div class="dash-stats" id="dash-stats"></div>
+        <p style="font-size:13.5px; color:var(--ink-soft); max-width:60ch;">Onglet <strong>Projets</strong> pour ajouter, modifier ou supprimer un projet. Onglet <strong>Avis</strong> pour modérer les commentaires laissés par les visiteurs. Onglet <strong>Accès</strong> pour gérer qui peut voir ton contenu privé.</p>
       </div>
-      <div class="proj-grid" id="proj-grid"></div>
-    </div>
 
-    <div class="admin-view" id="view-access">
-      <div class="access-form">
-        <h3 style="font-family:'Fraunces',serif; font-size:16px; margin-bottom:16px;">Créer un code d'accès</h3>
-        <form id="code-form">
-          <div class="field"><label>Nom du code (pour t'y retrouver)</label><input type="text" id="c-label" placeholder="ex. Code pour la famille"></div>
-          <div class="field">
-            <label>Portée</label>
-            <div class="visibility-choice">
-              <label class="vis-opt active" id="scope-all-lbl"><input type="radio" name="scope" value="all" checked>Tout le contenu privé</label>
-              <label class="vis-opt" id="scope-some-lbl"><input type="radio" name="scope" value="some">Projets spécifiques</label>
+      <div class="admin-view" id="view-projects">
+        <div class="proj-toolbar">
+          <input type="text" id="proj-search" placeholder="filtrer les projets…">
+        </div>
+        <div class="proj-grid" id="proj-grid"></div>
+      </div>
+
+      <div class="admin-view" id="view-moderation">
+        <table class="mod-table">
+          <thead><tr><th>Projet</th><th>Auteur</th><th>Avis</th><th>Date</th><th></th></tr></thead>
+          <tbody id="mod-tbody"></tbody>
+        </table>
+        <p style="font-size:13px; color:var(--ink-soft); padding:16px 0; display:none;" id="mod-empty">Aucun avis pour l'instant.</p>
+      </div>
+
+      <div class="admin-view" id="view-access">
+        <div class="access-form">
+          <h3 style="font-family:'Fraunces',serif; font-size:16px; margin-bottom:16px;">Créer un code d'accès</h3>
+          <form id="code-form">
+            <div class="field"><label>Nom du code (pour t'y retrouver)</label><input type="text" id="c-label" placeholder="ex. Code pour la famille"></div>
+            <div class="field">
+              <label>Portée</label>
+              <div class="visibility-choice">
+                <label class="vis-opt active" id="scope-all-lbl"><input type="radio" name="scope" value="all" checked>Tout le contenu privé</label>
+                <label class="vis-opt" id="scope-some-lbl"><input type="radio" name="scope" value="some">Projets spécifiques</label>
+              </div>
+              <div class="scope-list" id="scope-list" style="display:none;"></div>
             </div>
-            <div class="scope-list" id="scope-list" style="display:none;"></div>
-          </div>
-          <div class="field"><label>Expiration (optionnel)</label><input type="date" id="c-expires"></div>
-          <div class="modal-actions"><button type="submit" class="btn-primary">Générer le code</button></div>
-          <p class="form-error" id="code-error"></p>
-        </form>
+            <div class="field"><label>Expiration (optionnel)</label><input type="date" id="c-expires"></div>
+            <div class="modal-actions"><button type="submit" class="btn-primary">Générer le code</button></div>
+            <p class="form-error" id="code-error"></p>
+          </form>
+        </div>
+
+        <h3 style="font-family:'Fraunces',serif; font-size:16px; margin-bottom:12px;">Codes existants</h3>
+        <table class="codes-table">
+          <thead><tr><th>Code</th><th>Nom</th><th>Portée</th><th>Expire</th><th></th></tr></thead>
+          <tbody id="codes-tbody"></tbody>
+        </table>
+        <p style="font-size:13px; color:var(--ink-soft); padding:16px 0; display:none;" id="codes-empty">Aucun code pour l'instant.</p>
       </div>
-
-      <h3 style="font-family:'Fraunces',serif; font-size:16px; margin-bottom:12px;">Codes existants</h3>
-      <table class="codes-table">
-        <thead><tr><th>Code</th><th>Nom</th><th>Portée</th><th>Expire</th><th></th></tr></thead>
-        <tbody id="codes-tbody"></tbody>
-      </table>
-      <p style="font-size:13px; color:var(--ink-soft); padding:16px 0; display:none;" id="codes-empty">Aucun code pour l'instant.</p>
     </div>
-
   </div>
 </div>
 
@@ -270,7 +319,6 @@
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const STORAGE_BUCKET = 'project-images';
 
-  /* ---------------- identifiant visiteur (pour les likes) ---------------- */
   function getClientId(){
     try{
       let id = localStorage.getItem('client_id');
@@ -280,7 +328,6 @@
   }
   const CLIENT_ID = getClientId();
 
-  /* ---------------- toasts / confirm ---------------- */
   function toast(msg, type=''){
     const el = document.createElement('div');
     el.className = 'toast' + (type ? ' ' + type : '');
@@ -300,7 +347,6 @@
     });
   }
 
-  /* ---------------- icônes ---------------- */
   const ICONS = {
     cube: `<path d="M12 2 L21 7 L21 17 L12 22 L3 17 L3 7 Z"/><path d="M12 22 L12 12 M12 12 L21 7 M12 12 L3 7"/>`,
     battery: `<rect x="3" y="8" width="15" height="9" rx="2"/><rect x="18" y="11" width="3" height="3" rx="0.5"/><path d="M10 8 L7 13 H11 L8 18"/>`,
@@ -310,7 +356,8 @@
     doc: `<path d="M5 4 H19 M5 9 H19 M5 14 H15 M5 19 H12"/>`,
     lock: `<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>`,
     heart: `<path d="M12 21 C7 17 3 13.5 3 9.3 3 6.4 5.3 4 8.2 4 c1.7 0 3.2.8 3.8 2.1 C12.6 4.8 14.1 4 15.8 4 18.7 4 21 6.4 21 9.3 21 13.5 17 17 12 21Z"/>`,
-    bubble: `<path d="M4 5 H20 V16 H9 L5 20 V16 H4 Z"/>`
+    bubble: `<path d="M4 5 H20 V16 H9 L5 20 V16 H4 Z"/>`,
+    x: `<path d="M6 6 L18 18 M6 18 L18 6"/>`
   };
   function pickIcon(cat){
     const c = (cat || '').toLowerCase();
@@ -326,14 +373,13 @@
   let ADMIN_PROJECTS = [];
   let session = null;
   let redeemedCode = null;
-  let likeCounts = {};     // { project_id: n }
-  let myLikes = new Set(); // project_id que CE visiteur a aimés
-  let commentCounts = {};  // { project_id: n }
+  let likeCounts = {};
+  let myLikes = new Set();
+  let commentCounts = {};
 
-  /* ---------------- état des filtres / tri ---------------- */
   const state = { query:'', category:null, tag:null, sort:'recent', access:'all' };
+  const SORT_LABELS = { recent:'Plus récents', oldest:'Plus anciens', likes:'Plus aimés', comments:'Plus commentés' };
 
-  /* ---------------- moteur de recherche local ---------------- */
   const STOPWORDS = new Set(["je","veux","la","le","les","de","des","du","un","une","et","ou","pour","avec","sur","dans","mon","ma","mes","voir","cherche","montre","tout","ce","qui","est","en","au","aux","d","l"]);
   function normalize(s){ return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
   function keywords(q){ return normalize(q).split(/[^a-z0-9]+/).filter(w => w.length > 1 && !STOPWORDS.has(w)); }
@@ -344,12 +390,11 @@
     return score;
   }
 
-  /* ---------------- calcule la liste affichée ---------------- */
   function computeList(){
     let list = PROJECTS.slice();
     if (session && state.access !== 'all') list = list.filter(p => p.visibility === state.access);
     if (state.tag) list = list.filter(p => (p.tags||[]).includes(state.tag));
-    else if (state.category) list = list.filter(p => p.cat === state.category);
+    if (state.category) list = list.filter(p => p.cat === state.category);
 
     const words = keywords(state.query);
     if (words.length){
@@ -365,35 +410,10 @@
     return list;
   }
 
-  /* ---------------- rendu page publique ---------------- */
   const grid = document.getElementById('grid');
   const statusLine = document.getElementById('status-line');
   const emptyLine = document.getElementById('empty-line');
   const resultsTitle = document.getElementById('results-title');
-  const resetBtn = document.getElementById('reset-btn');
-  const filterRow = document.getElementById('filter-row');
-  const catList = document.getElementById('cat-list');
-
-  function renderFilters(){
-    const cats = [...new Set(PROJECTS.map(p => p.cat))];
-    filterRow.innerHTML = cats.map(c => `<button type="button" data-cat="${c}" class="${state.category===c?'active':''}">${c}</button>`).join('');
-    filterRow.querySelectorAll('button').forEach(btn => btn.addEventListener('click', () => {
-      state.category = (state.category === btn.dataset.cat) ? null : btn.dataset.cat;
-      state.tag = null;
-      renderFilters(); refresh();
-    }));
-    const allCats = [...new Set(ADMIN_PROJECTS.map(p => p.cat))];
-    catList.innerHTML = allCats.map(c => `<option value="${c}">`).join('');
-  }
-
-  function updateResultsHead(list){
-    if (state.query.trim()) resultsTitle.textContent = `Pour « ${state.query} »`;
-    else if (state.tag) resultsTitle.textContent = `Tag : ${state.tag}`;
-    else if (state.category) resultsTitle.textContent = state.category;
-    else resultsTitle.textContent = 'Tout';
-    const hasFilter = state.query.trim() || state.tag || state.category;
-    resetBtn.style.display = hasFilter ? 'inline-block' : 'none';
-  }
 
   function renderCards(list){
     grid.innerHTML = '';
@@ -423,14 +443,14 @@
     });
     grid.querySelectorAll('.tag').forEach(t => t.addEventListener('click', (e) => {
       e.stopPropagation();
-      state.tag = t.dataset.tag; state.category = null;
-      renderFilters(); refresh();
+      state.tag = t.dataset.tag;
+      renderFilterPanel(); renderActiveChips(); refresh();
     }));
   }
 
   function refresh(){
     const list = computeList();
-    updateResultsHead(list);
+    resultsTitle.textContent = state.query.trim() ? `Pour « ${state.query} »` : 'Tout';
     renderCards(list);
   }
 
@@ -458,27 +478,87 @@
     (comments||[]).forEach(c => { commentCounts[c.project_id] = (commentCounts[c.project_id]||0) + 1; });
   }
 
-  /* ---------------- recherche / filtres UI ---------------- */
+  const filterToggle = document.getElementById('filter-toggle');
+  const filterPanel = document.getElementById('filter-panel');
+  const filterCount = document.getElementById('filter-count');
+  const activeChips = document.getElementById('active-chips');
+
+  filterToggle.addEventListener('click', () => filterPanel.classList.toggle('open'));
+  document.addEventListener('click', (e) => {
+    if (!filterPanel.contains(e.target) && !filterToggle.contains(e.target)) filterPanel.classList.remove('open');
+  });
+  document.getElementById('filter-apply').addEventListener('click', () => filterPanel.classList.remove('open'));
+  document.getElementById('filter-reset-all').addEventListener('click', () => {
+    state.category = null; state.tag = null; state.sort = 'recent'; state.access = 'all'; state.query = '';
+    input.value = '';
+    renderFilterPanel(); renderActiveChips(); refresh();
+  });
+
+  document.querySelectorAll('input[name=sort]').forEach(r => r.addEventListener('change', () => {
+    state.sort = r.value; renderActiveChips(); refresh();
+  }));
+  document.querySelectorAll('input[name=access]').forEach(r => r.addEventListener('change', () => {
+    state.access = r.value; renderActiveChips(); refresh();
+  }));
+
+  function renderFilterPanel(){
+    document.querySelectorAll('input[name=sort]').forEach(r => r.checked = (r.value === state.sort));
+    document.querySelectorAll('input[name=access]').forEach(r => r.checked = (r.value === state.access));
+    document.getElementById('access-section').style.display = session ? 'block' : 'none';
+
+    const cats = [...new Set(PROJECTS.map(p => p.cat))];
+    const catOptions = document.getElementById('cat-options');
+    catOptions.innerHTML = cats.map(c => `<button type="button" class="filter-chip ${state.category===c?'active':''}" data-cat="${c}">${c}</button>`).join('');
+    catOptions.querySelectorAll('button').forEach(btn => btn.addEventListener('click', () => {
+      state.category = (state.category === btn.dataset.cat) ? null : btn.dataset.cat;
+      renderFilterPanel(); renderActiveChips(); refresh();
+    }));
+
+    const allTags = [...new Set(PROJECTS.flatMap(p => p.tags||[]))].slice(0, 16);
+    const tagSection = document.getElementById('tag-section');
+    const tagOptions = document.getElementById('tag-options');
+    if (allTags.length){
+      tagSection.style.display = 'block';
+      tagOptions.innerHTML = allTags.map(t => `<button type="button" class="filter-chip ${state.tag===t?'active':''}" data-tag="${t}">${t}</button>`).join('');
+      tagOptions.querySelectorAll('button').forEach(btn => btn.addEventListener('click', () => {
+        state.tag = (state.tag === btn.dataset.tag) ? null : btn.dataset.tag;
+        renderFilterPanel(); renderActiveChips(); refresh();
+      }));
+    } else { tagSection.style.display = 'none'; }
+
+    let count = 0;
+    if (state.category) count++;
+    if (state.tag) count++;
+    if (state.sort !== 'recent') count++;
+    if (session && state.access !== 'all') count++;
+    filterCount.style.display = count ? 'inline-block' : 'none';
+    filterCount.textContent = count;
+  }
+
+  function renderActiveChips(){
+    const chips = [];
+    if (state.category) chips.push({ label:`Catégorie : ${state.category}`, clear:() => { state.category = null; } });
+    if (state.tag) chips.push({ label:`Tag : ${state.tag}`, clear:() => { state.tag = null; } });
+    if (state.sort !== 'recent') chips.push({ label:`Tri : ${SORT_LABELS[state.sort]}`, clear:() => { state.sort = 'recent'; } });
+    if (session && state.access !== 'all') chips.push({ label: state.access === 'private' ? 'Privé uniquement' : 'Public uniquement', clear:() => { state.access = 'all'; } });
+    if (state.query.trim()) chips.push({ label:`Recherche : ${state.query}`, clear:() => { state.query = ''; input.value=''; } });
+
+    activeChips.innerHTML = chips.map((c,i) => `<span class="active-chip" data-i="${i}">${c.label}<button type="button" data-i="${i}"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none">${ICONS.x}</svg></button></span>`).join('');
+    activeChips.querySelectorAll('button').forEach(btn => btn.addEventListener('click', () => {
+      chips[Number(btn.dataset.i)].clear();
+      renderFilterPanel(); renderActiveChips(); refresh();
+    }));
+  }
+
   const form = document.getElementById('search-form');
   const input = document.getElementById('search-input');
-  form.addEventListener('submit', (e) => { e.preventDefault(); state.query = input.value; refresh(); });
-  resetBtn.addEventListener('click', () => { input.value=''; state.query=''; state.tag=null; state.category=null; renderFilters(); refresh(); });
+  form.addEventListener('submit', (e) => { e.preventDefault(); state.query = input.value; renderActiveChips(); refresh(); });
   let searchDebounce;
-  input.addEventListener('input', () => { clearTimeout(searchDebounce); searchDebounce = setTimeout(() => { state.query = input.value; refresh(); }, 300); });
+  input.addEventListener('input', () => { clearTimeout(searchDebounce); searchDebounce = setTimeout(() => { state.query = input.value; renderActiveChips(); refresh(); }, 300); });
   document.addEventListener('keydown', (e) => {
     if (e.key === '/' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA'){ e.preventDefault(); input.focus(); }
   });
 
-  document.getElementById('sort-select').addEventListener('change', (e) => { state.sort = e.target.value; refresh(); });
-  document.getElementById('access-toggle').querySelectorAll('button').forEach(btn => {
-    btn.addEventListener('click', () => {
-      state.access = btn.dataset.access;
-      document.querySelectorAll('#access-toggle button').forEach(b => b.classList.toggle('active', b === btn));
-      refresh();
-    });
-  });
-
-  /* ---------------- code d'accès visiteur ---------------- */
   const redeemOverlay = document.getElementById('redeem-overlay');
   document.getElementById('redeem-open').addEventListener('click', () => redeemOverlay.classList.add('open'));
   document.getElementById('redeem-close').addEventListener('click', () => redeemOverlay.classList.remove('open'));
@@ -497,7 +577,7 @@
     const banner = document.getElementById('access-banner');
     document.getElementById('access-banner-text').textContent = `Accès étendu actif — ${extra.length} projet(s) débloqué(s)`;
     banner.classList.add('show');
-    renderFilters(); refresh();
+    renderFilterPanel(); refresh();
     if (showFeedback) toast('Accès débloqué', 'ok');
     return true;
   }
@@ -511,10 +591,9 @@
     redeemedCode = null;
     document.getElementById('access-banner').classList.remove('show');
     await loadProjects(); await loadEngagement();
-    renderFilters(); refresh();
+    renderFilterPanel(); refresh();
   });
 
-  /* ---------------- fiche détail (likes + avis) ---------------- */
   const detailOverlay = document.getElementById('detail-overlay');
   let currentDetailId = null;
   document.getElementById('detail-close').addEventListener('click', () => detailOverlay.classList.remove('open'));
@@ -609,7 +688,6 @@
     toast('Avis publié', 'ok');
   });
 
-  /* ---------------- authentification ---------------- */
   const loginOverlay = document.getElementById('login-overlay');
   const headerActions = document.getElementById('header-actions');
 
@@ -630,18 +708,15 @@
   });
 
   function renderHeader(){
-    const accessToggle = document.getElementById('access-toggle');
     if (session){
       headerActions.innerHTML = `
         <button class="icon-btn" id="admin-open-btn" title="Administration"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></button>
         <button class="icon-btn filled" id="logout-btn" title="Se déconnecter"><svg class="icon" viewBox="0 0 24 24"><path d="M9 21 H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4 M16 17 L21 12 L16 7 M21 12 H9"/></svg></button>`;
       document.getElementById('admin-open-btn').addEventListener('click', openAdminPanel);
       document.getElementById('logout-btn').addEventListener('click', () => sb.auth.signOut());
-      accessToggle.style.display = 'flex';
     } else {
       headerActions.innerHTML = `<button class="icon-btn" id="login-btn" title="Connexion"><svg class="icon" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></button>`;
       document.getElementById('login-btn').addEventListener('click', () => loginOverlay.classList.add('open'));
-      accessToggle.style.display = 'none';
       state.access = 'all';
     }
   }
@@ -652,11 +727,10 @@
     if (!session) document.getElementById('admin-panel').classList.remove('open');
     await loadProjects();
     await loadEngagement();
-    renderFilters();
+    renderFilterPanel(); renderActiveChips();
     refresh();
   });
 
-  /* ======================= PANEL D'ADMINISTRATION ======================= */
   const adminPanel = document.getElementById('admin-panel');
   document.getElementById('admin-close').addEventListener('click', () => adminPanel.classList.remove('open'));
   document.querySelectorAll('.admin-tab').forEach(tab => {
@@ -666,6 +740,7 @@
       tab.classList.add('active');
       document.getElementById('view-' + tab.dataset.view).classList.add('active');
       if (tab.dataset.view === 'access') renderCodes();
+      if (tab.dataset.view === 'moderation') renderModeration();
     });
   });
 
@@ -690,7 +765,33 @@
     el.innerHTML = html;
   }
 
-  /* ---- grille de vignettes ---- */
+  async function renderModeration(){
+    const { data, error } = await sb.from('comments').select('*').order('created_at', {ascending:false});
+    const tbody = document.getElementById('mod-tbody');
+    const empty = document.getElementById('mod-empty');
+    if (error || !data || data.length === 0){ tbody.innerHTML=''; empty.style.display='block'; return; }
+    empty.style.display = 'none';
+    tbody.innerHTML = data.map(c => {
+      const proj = ADMIN_PROJECTS.find(p => p.id === c.project_id);
+      return `<tr>
+        <td class="mt-proj">${proj ? proj.title : '—'}</td>
+        <td>${c.author_name || 'Anonyme'}</td>
+        <td class="mt-content">${c.content}</td>
+        <td>${new Date(c.created_at).toLocaleDateString('fr-FR')}</td>
+        <td><button data-id="${c.id}" data-project="${c.project_id}" class="mod-del">Supprimer</button></td>
+      </tr>`;
+    }).join('');
+    tbody.querySelectorAll('.mod-del').forEach(b => b.addEventListener('click', async () => {
+      if (!(await confirmDialog('Supprimer cet avis ?'))) return;
+      await sb.from('comments').delete().eq('id', b.dataset.id);
+      commentCounts[b.dataset.project] = Math.max(0, (commentCounts[b.dataset.project]||1) - 1);
+      renderModeration();
+      renderOverview();
+      refresh();
+      toast('Avis supprimé', 'ok');
+    }));
+  }
+
   const projGrid = document.getElementById('proj-grid');
   const projSearch = document.getElementById('proj-search');
   projSearch.addEventListener('input', renderProjGrid);
@@ -717,7 +818,6 @@
     projGrid.querySelectorAll('.proj-card[data-id]').forEach(card => card.addEventListener('click', () => { loadIntoForm(card.dataset.id); openProjPanel(); }));
   }
 
-  /* ---- slide-over : formulaire projet ---- */
   const projPanel = document.getElementById('proj-panel');
   const projPanelBackdrop = document.getElementById('proj-panel-backdrop');
   function openProjPanel(){ projPanel.classList.add('open'); projPanelBackdrop.classList.add('open'); }
@@ -813,7 +913,7 @@
       if (error) throw error;
 
       await loadProjects(); await loadEngagement();
-      renderFilters(); refresh(); renderOverview(); renderProjGrid();
+      renderFilterPanel(); renderActiveChips(); refresh(); renderOverview(); renderProjGrid();
       toast(id ? 'Projet modifié' : 'Projet ajouté', 'ok');
       closeProjPanel();
     }catch(err){
@@ -830,12 +930,11 @@
     const { error } = await sb.from('projects').delete().eq('id', id);
     if (error){ toast('Erreur : ' + error.message, 'err'); return; }
     await loadProjects(); await loadEngagement();
-    renderFilters(); refresh(); renderOverview(); renderProjGrid();
+    renderFilterPanel(); renderActiveChips(); refresh(); renderOverview(); renderProjGrid();
     toast('Projet supprimé', 'ok');
     closeProjPanel();
   });
 
-  /* ======================= ONGLET ACCÈS ======================= */
   function genCode(len=8){
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let s = ''; for (let i=0;i<len;i++) s += chars[Math.floor(Math.random()*chars.length)];
@@ -903,14 +1002,14 @@
     }));
   }
 
-  /* ---------------- démarrage ---------------- */
   (async () => {
     const { data: { session: current } } = await sb.auth.getSession();
     session = current;
     renderHeader();
     await loadProjects();
     await loadEngagement();
-    renderFilters();
+    renderFilterPanel();
+    renderActiveChips();
     refresh();
   })();
 </script>
